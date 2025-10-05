@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inicio - Meteor Madness</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0d1117;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<script src="js/api.js"></script>
+<body class="text-white min-h-screen flex flex-col">
+
+  <!-- Encabezado -->
+  <header class="bg-gray-900 shadow-xl p-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-3xl font-bold text-red-400">☄️ Meteor Madness</h1>
+      <nav class="space-x-6">
+        <a href="index.html" class="hover:text-red-400">Home</a>
+        <a href="simulador.html" class="hover:text-red-400">Simulator</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="flex-grow p-8 max-w-7xl mx-auto">
+    <h2 class="text-2xl font-semibold mb-6 text-red-300">Explore Meteors</h2>
+
+    <div id="meteorito-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Simulator -->
+    <div class="bg-gray-900 p-5 rounded-xl shadow-2xl border-2 border-red-500 flex flex-col justify-center items-center hover:bg-gray-800 transition">
+        <h3 class="text-xl font-semibold text-red-400 mb-2">Simula un Impacto</h3>
+        <p class="text-gray-400 text-sm mb-4 text-center">Crea tu propio escenario de impacto: ajusta velocidad, tamaño y ángulo.</p>
+        <a href="simulator.html" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium w-full text-center">
+            Simulate 
+        </a>
+    </div>
+
+    </div>
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="bg-gray-900 text-gray-500 text-sm p-4 text-center border-t border-gray-700">
+    Datos proporcionados por la NASA NEO API | Proyecto educativo Meteor Madness ☄️
+  </footer>
+
+</body>
+</html>

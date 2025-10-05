@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meteor Madness - Impact Simulation</title>
+  <!-- Integración de Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Integración de D3.js para mapas 2D -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson@3"></script>
+  <style>
+    #three-container {
+      height: 100%; 
+      width: 100%;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d1117; 
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; 
+      height: 16px; 
+      border-radius: 50%; 
+      background: #f87171;
+      cursor: pointer;
+    }
+    #d3-map-container svg {
+      background-color: #1f2937;
+      border-radius: 0.75rem;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+</head>
+<body class="text-white min-h-screen flex flex-col">
+
+  <!-- Encabezado -->
+  <header class="bg-gray-900 shadow-xl p-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-3xl font-bold text-red-400">☄️ Meteor Madness</h1>
+      <div id="language-switcher" class="flex space-x-2">
+        <button class="text-sm font-medium text-red-300 hover:text-red-100 transition duration-150" onclick="setLanguage('es')">ES</button>
+        <button class="text-sm font-medium text-gray-500 hover:text-gray-300 transition duration-150" onclick="setLanguage('en')">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="flex-grow p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+    
+    <!-- Columna 1: Controles de Simulación y Mapa 2D -->
+    <div class="lg:col-span-1 space-y-6">
+
+      <!-- Panel de Controles -->
+      <div class="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700">
+        <h2 id="form-title" class="text-xl font-semibold mb-4 text-red-300">1. Parámetros del Impacto</h2>
+        <form id="impact-form" class="space-y-4">
+          
+          <div>
+            <label for="diameter" class="block text-sm font-medium text-gray-400" data-i18n="diameter_label">Diámetro del Asteroide (metros)</label>
+            <input type="number" id="diameter" name="diameter" value="100" min="1" class="mt-1 block w-full rounded-lg bg-gray-700 border-gray-600 text-white p-2">
+          </div>
+
+          <div>
+            <label for="velocity" class="block text-sm font-medium text-gray-400" data-i18n="velocity_label">Velocidad de Entrada (km/s)</label>
+            <input type="number" id="velocity" name="velocity" value="20" min="1" max="70" class="mt-1 block w-full rounded-lg bg-gray-700 border-gray-600 text-white p-2">
+          </div>
+
+          <div>
+            <label for="angle" class="block text-sm font-medium text-gray-400" data-i18n="angle_label">Ángulo de Impacto (grados)</label>
+            <input type="range" id="angle" name="angle" min="10" max="90" value="45" class="mt-1 block w-full appearance-none h-2 bg-gray-600 rounded-lg slider-thumb-red-400">
+            <span id="angle-value" class="text-xs text-gray-400">45°</span>
+          </div>
+          
+          <button type="submit" id="simulate-button" class="w-full py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none transition duration-150" data-i18n="simulate_button">
+            Simular Impacto
+          </button>
+        </form>
+      </div>
+
+      <!-- Contenedor para presets de NEOs -->
+      <div id="neo-presets" class="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700 mt-4">
+        <h3 class="text-sm font-medium text-gray-400 mb-2">Recent NEOs</h3>
+        <div id="neo-list" class="grid grid-cols-2 gap-2">
+          <button class="neo-preset bg-gray-700 hover:bg-gray-600 p-2 rounded text-xs" data-diameter="50" data-velocity="15">Small Asteroid</button>
+          <button class="neo-preset bg-gray-700 hover:bg-gray-600 p-2 rounded text-xs" data-diameter="500" data-velocity="25">Medium Asteroid</button>
+          <button class="neo-preset bg-gray-700 hover:bg-gray-600 p-2 rounded text-xs" data-diameter="1000" data-velocity="30">Large Asteroid</button>
+          <button class="neo-preset bg-gray-700 hover:bg-gray-600 p-2 rounded text-xs" data-diameter="5000" data-velocity="40">Catastrophic Asteroid</button>
+        </div>
+      </div>
+      
+      <!-- Panel de Resultados y Mapa 2D -->
+      <div class="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700 space-y-4">
+        <h2 id="results-title" class="text-xl font-semibold mb-2 text-red-300">2. Resultados y Zona de Riesgo</h2>
+        
+        <!-- Resultados del Mock -->
+        <div id="results-panel" class="text-sm space-y-2">
+          <p class="text-gray-400" data-i18n-prefix="energy_result">Energía liberada: <strong id="energy-result">--</strong></p>
+          <p class="text-gray-400" data-i18n-prefix="crater_result">Radio del Cráter Estimado: <strong id="crater-result">--</strong></p>
+        </div>
+
+        <!-- Contenedor del Mapa D3.js -->
+        <div id="d3-map-container" class="w-full aspect-square rounded-xl overflow-hidden">
+          <!-- El mapa D3.js se insertará aquí -->
+        </div>
+
+        <p id="disclaimer-text" class="mt-4 text-xs italic text-gray-500" data-i18n="disclaimer_text">
+            Este modelo es conceptual y utiliza datos abiertos de la NASA (NEO API) y USGS. El objetivo es educativo y no representa un pronóstico exacto.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Columna 2: Visualización 3D -->
+    <div class="lg:col-span-2 bg-gray-900 rounded-xl shadow-2xl p-2 h-96 lg:h-auto min-h-[50vh] flex flex-col">
+      <h2 id="simulation-title" class="text-xl font-semibold mb-2 text-center text-red-300">Simulación 3D de Trayectoria</h2>
+      <div id="three-container" class="flex-grow rounded-lg overflow-hidden">
+        <!-- El canvas de Three.js se insertará aquí -->
+      </div>
+    </div>
+
+  </main>
+  
+  <!-- Scripts de JavaScript -->
+  <script type="module" src="./js/main3d.js"></script>
+  <script src="./js/impactMap.js"></script>
+
+  <script>
+    // Lógica de formulario y Mock de resultados
+    document.getElementById('angle').addEventListener('input', (e) => {
+        document.getElementById('angle-value').textContent = e.target.value + '°';
+    });
+
+    // Presets de NEOs
+    document.querySelectorAll('.neo-preset').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const diameter = e.target.getAttribute('data-diameter');
+        const velocity = e.target.getAttribute('data-velocity');
+        
+        document.getElementById('diameter').value = diameter;
+        document.getElementById('velocity').value = velocity;
+        
+        // Disparar simulación automáticamente
+        document.getElementById('impact-form').dispatchEvent(new Event('submit'));
+      });
+    });
+
+    // Escucha el evento de envío del formulario
+    document.getElementById('impact-form').addEventListener('submit', (event) => {
+        event.preventDefault(); 
+
+        const diameter = parseFloat(document.getElementById('diameter').value);
+        const velocity = parseFloat(document.getElementById('velocity').value);
+        const angle = parseFloat(document.getElementById('angle').value);
+
+        // Mock de cálculos
+        const mockEnergy = (diameter * velocity * 0.1).toFixed(2);
+        const mockCrater = (diameter * 5).toFixed(0); 
+        
+        // Simulación de coordenadas de impacto (aleatorias para demostración)
+        const mockLat = (Math.random() * 180 - 90).toFixed(2);
+        const mockLon = (Math.random() * 360 - 180).toFixed(2);
+        const mockRadiusKm = diameter * 0.5; // Radio proporcional al diámetro
+
+        // Actualiza el panel de resultados
+        document.getElementById('energy-result').textContent = `${mockEnergy} MT`;
+        document.getElementById('crater-result').textContent = `${mockCrater} m`;
+
+        // 1. Llama a la función de simulación 3D
+        if (typeof window.startSimulation === 'function') {
+            window.startSimulation({ 
+              diameter, 
+              velocity, 
+              angle, 
+              lat: parseFloat(mockLat), 
+              lon: parseFloat(mockLon) 
+            });
+        } else {
+            console.error("La función startSimulation no está disponible.");
+        }
+
+        // 2. Llama a la función de mapa 2D
+        if (typeof window.drawImpactZone === 'function') {
+            window.drawImpactZone(parseFloat(mockLat), parseFloat(mockLon), mockRadiusKm);
+        } else {
+             console.error("La función drawImpactZone no está disponible.");
+        }
+    });
+
+    // Lógica de Multilenguaje
+    const translations = {
+      es: {
+        form_title: "1. Parámetros del Impacto",
+        diameter_label: "Diámetro del Asteroide (metros)",
+        velocity_label: "Velocidad de Entrada (km/s)",
+        angle_label: "Ángulo de Impacto (grados)",
+        simulate_button: "Simular Impacto",
+        results_title: "2. Resultados y Zona de Riesgo",
+        energy_result: "Energía liberada:",
+        crater_result: "Radio del Cráter Estimado:",
+        disclaimer_text: "Este modelo es conceptual y utiliza datos abiertos de la NASA (NEO API) y USGS. El objetivo es educativo y no representa un pronóstico exacto.",
+        simulation_title: "Simulación 3D de Trayectoria"
+      },
+      en: {
+        form_title: "1. Impact Parameters",
+        diameter_label: "Asteroid Diameter (meters)",
+        velocity_label: "Impact Velocity (km/s)",
+        angle_label: "Impact Angle (degrees)",
+        simulate_button: "Simulate Impact",
+        results_title: "2. Results and Risk Zone",
+        energy_result: "Energy released:",
+        crater_result: "Estimated Crater Radius:",
+        disclaimer_text: "This model is conceptual, using open data from NASA (NEO API) and USGS. The goal is educational and does not represent an exact forecast.",
+        simulation_title: "3D Trajectory Simulation"
+      }
+    };
+
+    function setLanguage(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = translations[lang][key];
+      });
+
+      document.querySelectorAll('[data-i18n-prefix]').forEach(element => {
+        const key = element.getAttribute('data-i18n-prefix');
+        const contentNode = element.querySelector('strong');
+        const currentContent = contentNode ? contentNode.textContent : '';
+        element.innerHTML = `${translations[lang][key]} <strong id="${contentNode?.id || key}">${currentContent}</strong>`;
+      });
+
+      document.getElementById('form-title').textContent = translations[lang].form_title;
+      document.getElementById('results-title').textContent = translations[lang].results_title;
+      document.getElementById('simulation-title').textContent = translations[lang].simulation_title;
+
+      document.getElementById('simulate-button').textContent = translations[lang].simulate_button;
+      document.getElementById('disclaimer-text').textContent = translations[lang].disclaimer_text;
+    }
+
+  setLanguage('en');
+
+  </script>
+</body>
+</html>

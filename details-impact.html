@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meteor Madness - Simulación de Impacto</title>
+  <!-- Integración de Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Integración de D3.js para mapas 2D -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    #three-container {
+      height: 100%; 
+      width: 100%;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d1117; 
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; 
+      height: 16px; 
+      border-radius: 50%; 
+      background: #f87171; /* red-400 */
+      cursor: pointer;
+    }
+    /* Estilos específicos para el mapa D3 */
+    #d3-map-container svg {
+      background-color: #1f2937; /* Gray-800 para el fondo del mapa */
+      border-radius: 0.75rem; /* rounded-xl */
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <script src="js/descriptions.js"></script>
+
+</head>
+<body class="text-white min-h-screen flex flex-col">
+
+  <!-- Encabezado -->
+  <header class="bg-gray-900 shadow-xl p-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <h1 class="text-3xl font-bold text-red-400">☄️ Meteor Madness</h1>
+      <div id="language-switcher" class="flex space-x-2">
+        <button class="text-sm font-medium text-red-300 hover:text-red-100 transition duration-150" onclick="setLanguage('es')">ES</button>
+        <button class="text-sm font-medium text-gray-500 hover:text-gray-300 transition duration-150" onclick="setLanguage('en')">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal - Layout Responsivo con Grid -->
+  <main class="flex-grow p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+    
+    <!-- Columna 1: Controles de Simulación y Mapa 2D -->
+    <div class="lg:col-span-1 space-y-6">
+
+        <!-- Description -->
+        <div id="meteorito-grid" class="p-8"></div>
+
+        <!-- Panel de Resultados y Mapa 2D (Persona 2 & 3) -->
+        <div class="bg-gray-800 p-5 rounded-xl shadow-lg border border-gray-700 space-y-4">
+            <h2 id="results-title" class="text-xl font-semibold mb-2 text-red-300">Resultados y Zona de Riesgo</h2>
+        
+            <!-- Resultados del Mock -->
+            <div id="results-panel" class="text-sm space-y-2">
+                <p class="text-gray-400" data-i18n-prefix="energy_result">Energía liberada: <strong id="energy-result">--</strong></p>
+                <p class="text-gray-400" data-i18n-prefix="crater_result">Radio del Cráter Estimado: <strong id="crater-result">--</strong></p>
+            </div>
+
+            <!-- Contenedor del Mapa D3.js -->
+            <div id="d3-map-container" class="w-full aspect-square rounded-xl overflow-hidden">
+            <!-- El mapa D3.js se insertará aquí -->
+            </div>
+
+            <p id="disclaimer-text" class="mt-4 text-xs italic text-gray-500" data-i18n="disclaimer_text">
+                Este modelo es conceptual y utiliza datos abiertos de la NASA (NEO API) y USGS. El objetivo es educativo y no representa un pronóstico exacto.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Columna 2: Visualización 3D (Persona 2) -->
+    <div class="lg:col-span-2 bg-gray-900 rounded-xl shadow-2xl p-2 h-96 lg:h-auto min-h-[50vh] flex flex-col">
+      <h2 id="simulation-title" class="text-xl font-semibold mb-2 text-center text-red-300">Simulación 3D de Trayectoria</h2>
+      <div id="three-container" class="flex-grow rounded-lg overflow-hidden">
+        <!-- El canvas de Three.js se insertará aquí -->
+      </div>
+    </div>
+
+  </main>
+  
+  <!-- Scripts de JavaScript (Module para Three.js, Script para D3/i18n) -->
+  <script type="module" src="./js/main3d.js"></script>
+  <script src="./js/impactMap.js"></script>
+
+  <script>
+    // PASO 3: Lógica de formulario y Mock de resultados
+    // Aseguramos que la función startSimulation y drawImpactZone sean accesibles
+
+    // Escucha el evento de envío del formulario
+    document.getElementById('impact-form').addEventListener('submit', (event) => {
+        event.preventDefault(); 
+
+        const diameter = parseFloat(document.getElementById('diameter').value);
+        const velocity = parseFloat(document.getElementById('velocity').value);
+        const angle = parseFloat(document.getElementById('angle').value);
+
+        // --- MOCK DE CÁLCULOS (Reemplazar con la llamada al backend) ---
+        const mockEnergy = (diameter * velocity * 0.1).toFixed(2);
+        const mockCrater = (diameter * 5).toFixed(0); 
+        
+        // Simulación de coordenadas de impacto (ejemplo: centro de África)
+        const mockLat = 0;
+        const mockLon = 20;
+        const mockRadiusKm = 200; // Radio de riesgo en kilómetros (ficticio)
+
+        // Actualiza el panel de resultados
+        document.getElementById('energy-result').textContent = `${mockEnergy} MT`;
+        document.getElementById('crater-result').textContent = `${mockCrater} m`;
+
+        // 1. Llama a la función de simulación 3D (desde main3d.js)
+        if (typeof window.startSimulation === 'function') {
+            window.startSimulation({ diameter, velocity, angle, lat: mockLat, lon: mockLon });
+        } else {
+            console.error("La función startSimulation no está disponible.");
+        }
+
+        // 2. Llama a la función de mapa 2D (desde impactMap.js)
+        if (typeof window.drawImpactZone === 'function') {
+            window.drawImpactZone(mockLat, mockLon, mockRadiusKm);
+        } else {
+             console.error("La función drawImpactZone no está disponible.");
+        }
+    });
+
+    // PASO 4: Lógica de Multilenguaje (i18n simple)
+    const translations = {
+      es: {
+        form_title: "1. Parámetros del Impacto",
+        diameter_label: "Diámetro del Asteroide (metros)",
+        velocity_label: "Velocidad de Entrada (km/s)",
+        angle_label: "Ángulo de Impacto (grados)",
+        simulate_button: "Simular Impacto",
+        results_title: "2. Resultados y Zona de Riesgo",
+        energy_result: "Energía liberada:",
+        crater_result: "Radio del Cráter Estimado:",
+        disclaimer_text: "Este modelo es conceptual y utiliza datos abiertos de la NASA (NEO API) y USGS. El objetivo es educativo y no representa un pronóstico exacto.",
+        simulation_title: "Simulación 3D de Trayectoria"
+      },
+      en: {
+        form_title: "1. Impact Parameters",
+        diameter_label: "Asteroid Diameter (meters)",
+        velocity_label: "Impact Velocity (km/s)",
+        angle_label: "Impact Angle (degrees)",
+        simulate_button: "Simulate Impact",
+        results_title: "2. Results and Risk Zone",
+        energy_result: "Energy released:",
+        crater_result: "Estimated Crater Radius:",
+        disclaimer_text: "This model is conceptual, using open data from NASA (NEO API) and USGS. The goal is educational and does not represent an exact forecast.",
+        simulation_title: "3D Trajectory Simulation"
+      }
+    };
+
+    function setLanguage(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = translations[lang][key];
+      });
+
+      document.querySelectorAll('[data-i18n-prefix]').forEach(element => {
+        const key = element.getAttribute('data-i18n-prefix');
+        const contentNode = element.querySelector('strong');
+        const currentContent = contentNode ? contentNode.textContent : '';
+        element.innerHTML = `${translations[lang][key]} <strong id="${key}">${currentContent}</strong>`;
+      });
+
+      // Actualizar títulos principales
+      document.getElementById('form-title').textContent = translations[lang].form_title;
+      document.getElementById('results-title').textContent = translations[lang].results_title;
+      document.getElementById('simulation-title').textContent = translations[lang].simulation_title;
+
+      // Actualiza el texto del botón y el disclaimer
+      document.getElementById('simulate-button').textContent = translations[lang].simulate_button;
+      document.getElementById('disclaimer-text').textContent = translations[lang].disclaimer_text;
+    }
+
+    setLanguage('es');
+
+  </script>
+</body>
+</html>
